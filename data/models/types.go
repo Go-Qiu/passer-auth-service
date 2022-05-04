@@ -13,3 +13,7 @@ type Name struct {
 	First string
 	Last  string
 }
+
+func (u User) ParseToJson() string {
+	return "{}"
+}
