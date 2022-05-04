@@ -127,9 +127,20 @@ func Get(w http.ResponseWriter, r *http.Request) {
 	params := r.URL.Query()
 
 	if len(params) == 1 && len(strings.TrimSpace(params.Get("id"))) != 0 {
-		// get the user data point that matches the id
 
-		fmt.Fprintln(w, "Found ...")
+		w.Header().Set("Content-Type", "application/json")
+		// get the user data point that matches the id
+		found, err := ds.Find(params.Get("id"))
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// ok.
+		user := found.GetItem()
+		rtn, _ := user.ToJson(true)
+		fmt.Fprintln(w, rtn)
 		return
 	}
 

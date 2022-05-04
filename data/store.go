@@ -2,9 +2,19 @@
 package data
 
 import (
+	"errors"
+
 	"github.com/go-qiu/passer-auth-service/data/avl"
 	"github.com/go-qiu/passer-auth-service/data/models"
 	"github.com/go-qiu/passer-auth-service/data/stack"
+)
+
+var (
+	ErrEmptyTree             error = errors.New("[AVL]: tree is empty")
+	ErrNodeNotFound          error = errors.New("[AVL]: node not found")
+	ErrDuplicatedNode        error = errors.New("[AVL]: found duplicated parcel job record")
+	ErrEmptyNodeItemStatus   error = errors.New("[AVL]: item status code cannot be empty")
+	ErrInvalidNodeItemStatus error = errors.New("[AVL]: item status code is invalid")
 )
 
 type DataStore struct {
@@ -47,4 +57,15 @@ func (ds *DataStore) ListAllNodes(s *stack.Stack, requireDesc bool) error {
 		s.SetSize(size)
 	}
 	return nil
+}
+
+// wrapper function to find a specific data point by id
+func (ds *DataStore) Find(id string) (avl.BinaryNode, error) {
+	found := ds.avl.Find(id)
+	if found == nil {
+		// not found
+		return *found, ErrNodeNotFound
+	}
+
+	return *found, nil
 }
