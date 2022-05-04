@@ -57,26 +57,49 @@ func GetAll(w http.ResponseWriter, r *http.Request) {
 	err := ds.ListAllNodes(&accounts, false)
 	if err != nil {
 		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
 	content := ""
 	count := 1
+	hasFailed := false
+
 	for accounts.GetSize() > 0 {
 		user, _ := accounts.Pop()
 		if count == 1 {
 			// first user data point
-			content += user.ParseToJson()
+			// content += user.ParseToJson()
+			c, err := user.ToJson(true)
+			if err != nil {
+				log.Println(err)
+				hasFailed = true
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				break
+			}
+			content += c
 		} else {
 			// more user data point
-			content += fmt.Sprintf(", %s", user.ParseToJson())
+			// content += fmt.Sprintf(", %s", user.ParseToJson())
+			c, err := user.ToJson(true)
+			if err != nil {
+				log.Println(err)
+				hasFailed = true
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				break
+			}
+			content += fmt.Sprintf(", %s", c)
 		}
 		count++
 		// fmt.Println(user)
 		// fmt.Println()
 	}
-	rtn := fmt.Sprintf("[%s]", content)
-	fmt.Fprintln(w, rtn)
 
+	if hasFailed {
+		return
+	} else {
+		rtn := fmt.Sprintf("[%s]", content)
+		fmt.Fprintln(w, rtn)
+	}
 }
 
 // handler to get a specific user

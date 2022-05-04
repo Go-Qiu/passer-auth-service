@@ -1,27 +1,31 @@
 package models
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 type User struct {
-	Id       string
-	Email    string
-	PwHash   string
-	Name     Name
-	IsActive bool
-	Roles    []string
+	Id       string   `json:"id"`
+	Email    string   `json:"email"`
+	PwHash   string   `json:"-"`
+	Name     Name     `json:"name"`
+	IsActive bool     `json:"isActive"`
+	Roles    []string `json:"roles"`
 }
 
 type Name struct {
-	First string
-	Last  string
+	First string `json:"first"`
+	Last  string `json:"last"`
 }
 
-func (u User) ParseToJson() string {
+func (u User) parseAllToJson() string {
 
 	content := "{\n\t"
 	content += fmt.Sprintf("\"id\" : \"%s\", \n\t", u.Id)
 	content += fmt.Sprintf("\"email\" : \"%s\", \n\t", u.Email)
 	content += fmt.Sprintf("\"isActive\" : %v, \n\t", u.IsActive)
+	content += fmt.Sprintf("\"pwhash\" : \"%s\", \n\t", u.PwHash)
 	content += fmt.Sprintf("\"name\" : { \n\t\"first\" :\" %s\", \n\t\"last\" : \"%s\"\n\t}, ", u.Name.First, u.Name.Last)
 
 	// handle roles attribure
@@ -45,4 +49,20 @@ func (u User) ParseToJson() string {
 	content += fmt.Sprintln("\n\t}")
 	//
 	return content
+}
+
+func (u User) ToJson(all bool) (string, error) {
+	if all {
+		// all attributes
+		rtn := u.parseAllToJson()
+		return rtn, nil
+	} else {
+		// leave out pwhash attribute
+		rtn, err := json.Marshal(u)
+		if err != nil {
+			return "", nil
+		}
+		return string(rtn), nil
+	}
+
 }
