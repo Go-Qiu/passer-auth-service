@@ -46,6 +46,14 @@ func Remove(w http.ResponseWriter, r *http.Request) {
 // handler to list all the users
 func GetAll(w http.ResponseWriter, r *http.Request) {
 
+	if r.Method != http.MethodGet {
+		// not a 'GET' request
+		msg := fmt.Sprintf("Request method, '%s' is not allowed for this api endpoint.", r.Method)
+		http.Error(w, msg, http.StatusForbidden)
+	}
+
+	// ok.  is a 'GET' request.
+
 	// set the Header.Content-Type to "application/json" to
 	// ensure the proper return of the outcome in json format
 	// to the response
@@ -67,9 +75,9 @@ func GetAll(w http.ResponseWriter, r *http.Request) {
 	for accounts.GetSize() > 0 {
 		user, _ := accounts.Pop()
 		if count == 1 {
+
 			// first user data point
-			// content += user.ParseToJson()
-			c, err := user.ToJson(true)
+			c, err := user.ToJson(false)
 			if err != nil {
 				log.Println(err)
 				hasFailed = true
@@ -77,9 +85,10 @@ func GetAll(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 			content += c
+
 		} else {
-			// more user data point
-			// content += fmt.Sprintf(", %s", user.ParseToJson())
+
+			// subsequent user data point
 			c, err := user.ToJson(true)
 			if err != nil {
 				log.Println(err)
@@ -90,8 +99,6 @@ func GetAll(w http.ResponseWriter, r *http.Request) {
 			content += fmt.Sprintf(", %s", c)
 		}
 		count++
-		// fmt.Println(user)
-		// fmt.Println()
 	}
 
 	if hasFailed {
