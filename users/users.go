@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/go-qiu/passer-auth-service/data"
 	"github.com/go-qiu/passer-auth-service/data/stack"
@@ -43,13 +44,14 @@ func Remove(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// handler to list all the users
+// handler to list all the users (without the pwhash)
 func GetAll(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodGet {
 		// not a 'GET' request
 		msg := fmt.Sprintf("Request method, '%s' is not allowed for this api endpoint.", r.Method)
 		http.Error(w, msg, http.StatusForbidden)
+		return
 	}
 
 	// ok.  is a 'GET' request.
@@ -111,5 +113,24 @@ func GetAll(w http.ResponseWriter, r *http.Request) {
 
 // handler to get a specific user
 func Get(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodGet {
+
+		// not a 'GET' request
+		msg := fmt.Sprintf("Request method, '%s' is not allowed for this api endpoint.", r.Method)
+		http.Error(w, msg, http.StatusForbidden)
+		return
+	}
+
+	// ok. it is a 'GET' request.
+	// get the params passed in via the url
+	params := r.URL.Query()
+
+	if len(params) == 1 && len(strings.TrimSpace(params.Get("id"))) != 0 {
+		// get the user data point that matches the id
+
+		fmt.Fprintln(w, "Found ...")
+		return
+	}
 
 }

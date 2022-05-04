@@ -25,7 +25,7 @@ func main() {
 	http.HandleFunc("/signup", signUp)
 	http.HandleFunc("/hash", handleHash)
 	http.HandleFunc("/verify", verifyHash)
-	http.HandleFunc("/users", users.GetAll)
+	http.HandleFunc("/users", users.Get)
 
 	log.Printf("HTTP Server is started and listening at %s ...\n", addr)
 	log.Fatalln(http.ListenAndServe(addr, nil))
