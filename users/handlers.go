@@ -31,6 +31,16 @@ type paramsRemove struct {
 	Email string `json:"email"`
 }
 
+type updateableFields struct {
+	IsActive bool     `json:"isActive"`
+	Name     name     `json:"name"`
+	Roles    []string `json:"roles"`
+}
+type paramsUpdate struct {
+	Email   string           `json:"email"`
+	Updates updateableFields `json:"updates"`
+}
+
 // type outUser struct {
 // 	Id       string `json:"id"`
 // 	Email    string `json:"email"`
@@ -118,7 +128,32 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 				//
 			} else if r.Method == http.MethodPut {
-				update(r)
+
+				// 'PUT' request --> update
+				var paramsUpdate paramsUpdate
+				err = json.Unmarshal(body, &paramsUpdate)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
+				updated, err := update(paramsUpdate)
+				if err != nil {
+					rtn := `{
+						"ok": false,
+						"msg": "fail to find user data to update",
+						"data": {}
+					}`
+					fmt.Fprintln(w, rtn)
+					return
+				}
+
+				// update successfully.
+				fmt.Fprintf(w, `{
+					"ok": true,
+					"msg": "successfully updated user data",
+					"data": %s
+				}
+				`, updated)
+				return
 				//
 			} else if r.Method == http.MethodDelete {
 

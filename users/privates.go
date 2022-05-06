@@ -149,8 +149,26 @@ func add(p paramsAdd) (string, error) {
 }
 
 // function to update a user
-func update(r *http.Request) error {
-	return nil
+func update(p paramsUpdate) (string, error) {
+
+	updates := models.User{}
+	updates.Id = p.Email
+	updates.Email = p.Email
+	updates.IsActive = p.Updates.IsActive
+	updates.Name.First = p.Updates.Name.First
+	updates.Name.Last = p.Updates.Name.Last
+	updates.Roles = p.Updates.Roles
+
+	updated, err := ds.Update(p.Email, updates)
+	if err != nil {
+		return "{}", err
+	}
+
+	u, err := json.Marshal(updated)
+	if err != nil {
+		return "{}", err
+	}
+	return string(u), nil
 }
 
 // function to remove a user

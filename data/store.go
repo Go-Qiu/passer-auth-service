@@ -80,3 +80,13 @@ func (ds *DataStore) Remove(id string) error {
 
 	return nil
 }
+
+func (ds *DataStore) Update(id string, updated models.User) (models.User, error) {
+
+	u, err := ds.avl.Update(id, updated)
+	if err != nil {
+		return models.User{}, err
+	}
+
+	return u.GetItem(), nil
+}

@@ -191,3 +191,27 @@ func (tree *AVL) UpdateStatus(id string, status string) (BinaryNode, error) {
 	}
 
 }
+
+func (tree *AVL) Update(id string, updated models.User) (*BinaryNode, error) {
+
+	// err := updateNode(&found, item)
+	// if err != nil {
+	// 	return BinaryNode{}, err
+	// }
+
+	// find the node
+	found := findNode(tree.root, id)
+	if found == nil {
+		// not found
+		return found, ErrNodeNotFound
+	}
+
+	// ok. found node.
+	// update the node.
+	found.item.IsActive = updated.IsActive
+	found.item.Name.First = updated.Name.First
+	found.item.Name.Last = updated.Name.Last
+	found.item.Roles = updated.Roles
+
+	return found, nil
+}
