@@ -60,12 +60,23 @@ func (ds *DataStore) ListAllNodes(s *stack.Stack, requireDesc bool) error {
 }
 
 // wrapper function to find a specific data point by id
-func (ds *DataStore) Find(id string) (avl.BinaryNode, error) {
+func (ds *DataStore) Find(id string) (*avl.BinaryNode, error) {
 	found := ds.avl.Find(id)
 	if found == nil {
 		// not found
-		return *found, ErrNodeNotFound
+		return found, ErrNodeNotFound
 	}
 
-	return *found, nil
+	return found, nil
+}
+
+// wrapper function to remove a specific data point by id (i.e. email)
+func (ds *DataStore) Remove(id string) error {
+
+	err := ds.avl.Remove(id)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

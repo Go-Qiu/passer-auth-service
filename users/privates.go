@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/go-qiu/passer-auth-service/data/models"
 	"github.com/go-qiu/passer-auth-service/data/stack"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -84,21 +85,18 @@ func execAuth(r *http.Request) error {
 
 	if err != nil {
 		log.Println(err)
-		// http.Error(*w, err.Error(), http.StatusInternalServerError)
 		return err
 	}
 	err = json.Unmarshal(b, &params)
 	if err != nil {
 		log.Println(err)
-		// http.Error(*w, err.Error(), http.StatusInternalServerError)
 		return err
 	}
 
 	// (*w).Header().Set("Content-Type", "application/json")
 	found, err := ds.Find(params.Email)
 	if err != nil {
-		// fmt.Fprintln(*w, `{"ok": false}`)
-		return err
+		return ErrAuthFail
 	}
 
 	// found.
@@ -106,11 +104,74 @@ func execAuth(r *http.Request) error {
 	err = bcrypt.CompareHashAndPassword([]byte(user.PwHash), []byte(params.Pw))
 	if err != nil {
 		// pwhash does not match.
-		// fmt.Fprintln(*w, `{"ok": false}`)
 		return ErrAuthFail
 	} else {
 		// pwhash matches
-		// fmt.Fprintln(*w, `{"ok": true}`)
 		return nil
 	}
+}
+
+// function to add a user
+func add(p paramsAdd) (string, error) {
+
+	var u models.User
+
+	u.Id = p.Email
+	u.Email = p.Email
+	u.Name.First = p.Name.First
+	u.Name.Last = p.Name.Last
+	u.IsActive = p.IsActive
+	u.Roles = p.Roles
+
+	pwhash, err := bcrypt.GenerateFromPassword([]byte(p.Password), bcrypt.MinCost)
+	if err != nil {
+		return "", err
+	}
+	u.PwHash = string(pwhash)
+
+	err = ds.InsertNode(u)
+	if err != nil {
+		return "", err
+	}
+
+	// get the new user added from the in-memory data store
+	n, err := ds.Find(p.Email)
+	if err != nil {
+		return "", err
+	}
+	new := n.GetItem()
+
+	rtn, err := json.Marshal(new)
+	if err != nil {
+		return "", nil
+	}
+	return string(rtn), nil
+}
+
+// function to update a user
+func update(r *http.Request) error {
+	return nil
+}
+
+// function to remove a user
+func remove(email string) error {
+
+	err := ds.Remove(email)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// function to check (by email) if a data point (i.e. user)
+// existed in the in-memory data store.
+func existed(email string) bool {
+	found, err := ds.Find(email)
+	if err != nil && found == nil {
+		return false
+	}
+
+	// found user data point
+	return true
 }
