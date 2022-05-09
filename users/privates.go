@@ -77,7 +77,7 @@ func getAll(w *http.ResponseWriter, r *http.Request) {
 }
 
 // function to execute the authentication check
-func execAuth(r *http.Request) error {
+func execAuth(r *http.Request) (string, error) {
 
 	var params paramsAuth
 	b, err := ioutil.ReadAll(r.Body)
@@ -85,18 +85,18 @@ func execAuth(r *http.Request) error {
 
 	if err != nil {
 		log.Println(err)
-		return err
+		return "", err
 	}
 	err = json.Unmarshal(b, &params)
 	if err != nil {
 		log.Println(err)
-		return err
+		return "", err
 	}
 
 	// (*w).Header().Set("Content-Type", "application/json")
 	found, err := ds.Find(params.Email)
 	if err != nil {
-		return ErrAuthFail
+		return "", ErrAuthFail
 	}
 
 	// found.
@@ -104,10 +104,15 @@ func execAuth(r *http.Request) error {
 	err = bcrypt.CompareHashAndPassword([]byte(user.PwHash), []byte(params.Pw))
 	if err != nil {
 		// pwhash does not match.
-		return ErrAuthFail
+		return "", ErrAuthFail
 	} else {
 		// pwhash matches
-		return nil
+		userJsonString, err := user.ToJson(false)
+		if err != nil {
+			return "", err
+		}
+
+		return userJsonString, nil
 	}
 }
 

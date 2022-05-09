@@ -250,7 +250,7 @@ func Auth(w http.ResponseWriter, r *http.Request) {
 		// json data is in the request body.
 		// get the json passed in.
 		w.Header().Set("Content-Type", "application/json")
-		err := execAuth(r)
+		outcome, err := execAuth(r)
 		if err != nil {
 			if err != ErrAuthFail {
 				log.Println(err)
@@ -258,12 +258,21 @@ func Auth(w http.ResponseWriter, r *http.Request) {
 				return
 			} else {
 				// auth failure
-				fmt.Fprintln(w, `{"ok": false}`)
+				fmt.Fprintf(w, `{
+					"ok" : false,
+					"msg" : "[AUTH]: authentication failed",
+					"data" : {}
+				}`)
 				return
 			}
 		}
 
 		// ok.
-		fmt.Fprintln(w, `{"ok": true}`)
+		fmt.Fprintf(w, `{
+			"ok" : true,
+			"msg" : "[AUTH]: authentication ok",
+			"data" : %s
+		}`, outcome)
+		return
 	}
 }
