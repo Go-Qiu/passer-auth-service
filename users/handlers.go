@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/go-qiu/passer-auth-service/data"
+	"github.com/go-qiu/passer-auth-service/data/models"
 	"github.com/go-qiu/passer-auth-service/helpers"
 )
 
@@ -67,7 +68,7 @@ func init() {
 	}
 
 	for _, u := range userList {
-		ds.InsertNode(u)
+		ds.InsertNode(u, u.Email)
 	}
 
 }
@@ -228,7 +229,7 @@ func get(w *http.ResponseWriter, r *http.Request) {
 
 		// ok.
 		user := found.GetItem()
-		rtn, _ := user.ToJson(true)
+		rtn, _ := user.(models.User).ToJson(true)
 		fmt.Fprintln(*w, rtn)
 		return
 	}

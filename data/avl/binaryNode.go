@@ -5,19 +5,19 @@ package avl
 import (
 	"strings"
 
-	"github.com/go-qiu/passer-auth-service/data/models"
 	"github.com/go-qiu/passer-auth-service/data/stack"
 )
 
 // binary node struct
 type BinaryNode struct {
-	item   models.User
+	id     string
+	item   interface{}
 	left   *BinaryNode
 	right  *BinaryNode
 	height int
 }
 
-func (n *BinaryNode) GetItem() models.User {
+func (n *BinaryNode) GetItem() interface{} {
 	return n.item
 }
 
@@ -93,15 +93,16 @@ func (n *BinaryNode) balanceFactor() int {
 	return n.left.Height() - n.right.Height()
 }
 
-func newNode(item models.User) *BinaryNode {
+func newNode(item interface{}, id string) *BinaryNode {
 	return &BinaryNode{
+		id:    id,
 		item:  item,
 		left:  nil,
 		right: nil,
 	}
 }
 
-func (n *BinaryNode) Item() models.User {
+func (n *BinaryNode) Item() interface{} {
 	return n.item
 }
 
@@ -113,30 +114,30 @@ func (n *BinaryNode) Right() *BinaryNode {
 	return n.right
 }
 
-func insertNode(node *BinaryNode, item models.User) (*BinaryNode, error) {
+func insertNode(node *BinaryNode, item interface{}, id string) (*BinaryNode, error) {
 	//
 	if node == nil {
 		// reached a leaf node
-		return newNode(item), nil
+		return newNode(item, id), nil
 	}
 
-	if item.Id == node.item.Id {
+	if id == node.id {
 		// a duplicate node (i.e. Job record). not allowed.
 		return nil, ErrDuplicatedNode
 	}
 
-	if item.Id > node.item.Id {
+	if id > node.id {
 		// new Job record id is greater than node's value
-		right, err := insertNode(node.right, item)
+		right, err := insertNode(node.right, item, id)
 		if err != nil {
 			return nil, err
 		}
 
 		node.right = right
 
-	} else if item.Id < node.item.Id {
+	} else if id < node.id {
 		// new Job record id is lesser than node's value
-		left, err := insertNode(node.left, item)
+		left, err := insertNode(node.left, item, id)
 		if err != nil {
 			return nil, err
 		}
@@ -144,10 +145,11 @@ func insertNode(node *BinaryNode, item models.User) (*BinaryNode, error) {
 		node.left = left
 	}
 
-	return rotateInsert(node, item), nil
+	// recursive. execute tree balancing at this node (if needed)
+	return rotateInsert(node), nil
 }
 
-func rotateInsert(node *BinaryNode, item models.User) *BinaryNode {
+func rotateInsert(node *BinaryNode) *BinaryNode {
 	// update the height on every insertion
 	node.updateHeight()
 
@@ -155,23 +157,23 @@ func rotateInsert(node *BinaryNode, item models.User) *BinaryNode {
 	bf := node.balanceFactor()
 
 	// nodes lined-up to the left
-	if bf > 1 && item.Id < node.left.item.Id {
+	if bf > 1 && node.id < node.left.id {
 		return rightRotate(node)
 	}
 
 	// nodes lined-up to the right
-	if bf < -1 && item.Id > node.right.item.Id {
+	if bf < -1 && node.id > node.right.id {
 		return leftRotate(node)
 	}
 
 	// nodes lined-up to a 'less than' shape
-	if bf > 1 && item.Id > node.left.item.Id {
+	if bf > 1 && node.id > node.left.id {
 		node.left = leftRotate(node.left)
 		return rightRotate(node)
 	}
 
 	// nodes lined-up to a 'greater than' shape
-	if bf < -1 && item.Id < node.right.item.Id {
+	if bf < -1 && node.id < node.right.id {
 		node.right = rightRotate(node.right)
 		return leftRotate(node)
 	}
@@ -205,17 +207,17 @@ func findNode(node *BinaryNode, id string) *BinaryNode {
 		return nil
 	}
 
-	if node.item.Id == id {
+	if node.id == id {
 		// found.
 		return node
 	}
 
-	if node.item.Id < id {
+	if node.id < id {
 		// target id is greater than current node id
 		return findNode(node.right, id)
 	}
 
-	if node.item.Id > id {
+	if node.id > id {
 		return findNode(node.left, id)
 	}
 
@@ -246,7 +248,7 @@ func removeNode(node *BinaryNode, id string) (*BinaryNode, error) {
 		return nil, ErrNodeNotFound
 	}
 
-	if id > node.item.Id {
+	if id > node.id {
 
 		// target id is greater than current node id
 		right, err := removeNode(node.right, id)
@@ -255,7 +257,7 @@ func removeNode(node *BinaryNode, id string) (*BinaryNode, error) {
 		}
 		node.right = right
 
-	} else if id < node.item.Id {
+	} else if id < node.id {
 		// target id is lesser than the current node id
 		left, err := removeNode(node.left, id)
 		if err != nil {
@@ -274,8 +276,8 @@ func removeNode(node *BinaryNode, id string) (*BinaryNode, error) {
 			item := successor.item
 
 			// remove the successor
-			right, err := removeNode(node.right, item.Id)
-			// left, err := removeNode(node.left, item.Id)
+			right, err := removeNode(node.right, id)
+			// left, err := removeNode(node.left, id)
 			if err != nil {
 				return nil, err
 			}
@@ -345,14 +347,14 @@ func rotateDelete(node *BinaryNode) *BinaryNode {
 /*
 	function to update a specific node
 */
-func updateNode(n **BinaryNode, updated models.User) error {
+func updateNode(n **BinaryNode, updated interface{}, id string) error {
 
-	if len(strings.TrimSpace(updated.Id)) == 0 {
+	if len(strings.TrimSpace(id)) == 0 {
 		return ErrEmptyNodeItemStatus
 	}
 
-	if (*n).item.Id == updated.Id {
-		(*n).item.IsActive = updated.IsActive
+	if (*n).id == id {
+		(*n).item = updated
 	}
 
 	return nil

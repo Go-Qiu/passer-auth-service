@@ -49,7 +49,7 @@ func getAll(w *http.ResponseWriter, r *http.Request) {
 
 	for accounts.GetSize() > 0 {
 		user, _ := accounts.Pop()
-		c, err := user.ToJson(false)
+		c, err := user.(models.User).ToJson(false)
 		if err != nil {
 			log.Println(err)
 			hasFailed = true
@@ -101,13 +101,13 @@ func execAuth(r *http.Request) (string, error) {
 
 	// found.
 	user := found.GetItem()
-	err = bcrypt.CompareHashAndPassword([]byte(user.PwHash), []byte(params.Pw))
+	err = bcrypt.CompareHashAndPassword([]byte(user.(models.User).PwHash), []byte(params.Pw))
 	if err != nil {
 		// pwhash does not match.
 		return "", ErrAuthFail
 	} else {
 		// pwhash matches
-		userJsonString, err := user.ToJson(false)
+		userJsonString, err := user.(models.User).ToJson(false)
 		if err != nil {
 			return "", err
 		}
@@ -134,7 +134,7 @@ func add(p paramsAdd) (string, error) {
 	}
 	u.PwHash = string(pwhash)
 
-	err = ds.InsertNode(u)
+	err = ds.InsertNode(u, u.Email)
 	if err != nil {
 		return "", err
 	}

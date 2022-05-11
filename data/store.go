@@ -25,9 +25,9 @@ func New() *DataStore {
 	return &DataStore{avl: avl.New()}
 }
 
-func (ds *DataStore) InsertNode(item models.User) error {
+func (ds *DataStore) InsertNode(item models.User, id string) error {
 
-	err := ds.avl.InsertNode(item)
+	err := ds.avl.InsertNode(item, id)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (ds *DataStore) Remove(id string) error {
 	return nil
 }
 
-func (ds *DataStore) Update(id string, updated models.User) (models.User, error) {
+func (ds *DataStore) Update(id string, updated interface{}) (interface{}, error) {
 
 	u, err := ds.avl.Update(id, updated)
 	if err != nil {

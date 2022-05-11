@@ -2,9 +2,7 @@ package avl
 
 import (
 	"errors"
-	"strings"
 
-	"github.com/go-qiu/passer-auth-service/data/models"
 	"github.com/go-qiu/passer-auth-service/data/stack"
 )
 
@@ -33,9 +31,9 @@ func New() *AVL {
 /*
 	Wrapper function to insert a new node into the AVL tree.
 */
-func (tree *AVL) InsertNode(item models.User) error {
+func (tree *AVL) InsertNode(item interface{}, id string) error {
 
-	root, err := insertNode(tree.root, item)
+	root, err := insertNode(tree.root, item, id)
 	if err != nil {
 		return err
 	}
@@ -44,12 +42,17 @@ func (tree *AVL) InsertNode(item models.User) error {
 	return nil
 }
 
-/*
-	Wrapper function for traversing the AVL tree, in-order manner.
-*/
-// func (tree *AVL) Traverse() {
+func (tree *AVL) ListAllNodes(s *stack.Stack) error {
 
-// 	// ok. tree is not empty
+	// ok. tree is not empty
+
+	// traverse all the nodes on the tree (in-order sequence)
+	// and cache the outcome into the stack (passed in).
+	traverse(tree.root, s)
+	return nil
+}
+
+// func (tree *AVL) ListSelectedNodesByStatus(status string, descending bool) error {
 
 // 	// declare a stack to cache
 // 	// the Job record (in each node)
@@ -58,86 +61,43 @@ func (tree *AVL) InsertNode(item models.User) error {
 // 	// stackItems := stack{top: nil, size: 0}
 // 	stackItems := stack.New()
 
+// 	// traverse all the nodes on the tree (in-order sequence)
 // 	traverse(tree.root, &stackItems)
 
 // 	// items (i.e. Job records) will be listed in desc order
-// 	// stackItems.ListAllNodes()
+// 	if descending {
 
-// 	// stackItemsAsc := stack{top: nil, size: 0}
-// 	stackItemsAsc := stack.New()
+// 		// to list in descending order
+// 		err := stackItems.ListSelectedNodesByStatus(status)
 
-// 	// reverse the order of the stack to get asc order
-// 	for i := 0; i < stackItems.GetSize(); i++ {
-// 		item, _ := stackItems.Pop()
-// 		stackItemsAsc.Push(item)
+// 		if err != nil {
+// 			return err
+// 		}
+
+// 	} else {
+
+// 		// to list in ascending order
+// 		// stackItemsAsc := stack{top: nil, size: 0}
+// 		stackItemsAsc := stack.New()
+
+// 		// reverse the order of the stack to get asc order
+// 		for stackItems.GetSize() > 0 {
+// 			item, _ := stackItems.Pop()
+// 			// if item.Status == status {
+// 			// 	stackItemsAsc.Push(item)
+// 			// }
+// 			stackItemsAsc.Push(item)
+// 		}
+
+// 		// print out all the nodes in the stack
+// 		// err := stackItemsAsc.ListAllNodes()
+// 		// if err != nil {
+// 		// 	return err
+// 		// }
 // 	}
 
-// 	// print out all the nodes in the stack
-// 	stackItemsAsc.ListAllNodes()
+// 	return nil
 // }
-
-func (tree *AVL) ListAllNodes(s *stack.Stack) error {
-
-	// ok. tree is not empty
-
-	// declare a stack to cache
-	// the Job record (in each node)
-	// in in-order traversal sequence.
-
-	// stackItems := stack{top: nil, size: 0}
-	// stackItems := stack.New()
-
-	// traverse all the nodes on the tree (in-order sequence)
-	// and cache the outcome into the stack passed in.
-	traverse(tree.root, s)
-	return nil
-}
-
-func (tree *AVL) ListSelectedNodesByStatus(status string, descending bool) error {
-
-	// declare a stack to cache
-	// the Job record (in each node)
-	// in in-order traversal sequence.
-
-	// stackItems := stack{top: nil, size: 0}
-	stackItems := stack.New()
-
-	// traverse all the nodes on the tree (in-order sequence)
-	traverse(tree.root, &stackItems)
-
-	// items (i.e. Job records) will be listed in desc order
-	if descending {
-
-		// to list in descending order
-		err := stackItems.ListSelectedNodesByStatus(status)
-		if err != nil {
-			return err
-		}
-
-	} else {
-
-		// to list in ascending order
-		// stackItemsAsc := stack{top: nil, size: 0}
-		stackItemsAsc := stack.New()
-
-		// reverse the order of the stack to get asc order
-		for stackItems.GetSize() > 0 {
-			item, _ := stackItems.Pop()
-			// if item.Status == status {
-			// 	stackItemsAsc.Push(item)
-			// }
-			stackItemsAsc.Push(item)
-		}
-
-		// print out all the nodes in the stack
-		// err := stackItemsAsc.ListAllNodes()
-		// if err != nil {
-		// 	return err
-		// }
-	}
-
-	return nil
-}
 
 /*
 	Wrapper function to find a specific node by id
@@ -159,40 +119,40 @@ func (tree *AVL) Remove(id string) error {
 /*
 	Wrapper function to update a specific node (identified by id) on the tree
 */
-func (tree *AVL) UpdateStatus(id string, status string) (BinaryNode, error) {
+// func (tree *AVL) UpdateStatus(id string, status string) (BinaryNode, error) {
 
-	// exceptions handling
+// 	// exceptions handling
 
-	switch strings.ToUpper(status) {
-	case "NEW", "READY", "ARRIVED", "COMPLETED":
+// 	switch strings.ToUpper(status) {
+// 	case "NEW", "READY", "ARRIVED", "COMPLETED":
 
-		// valid status code
+// 		// valid status code
 
-		// find the node
-		found := findNode(tree.root, id)
-		if found == nil {
-			// not found
-			return *found, ErrNodeNotFound
-		}
+// 		// find the node
+// 		found := findNode(tree.root, id)
+// 		if found == nil {
+// 			// not found
+// 			return *found, ErrNodeNotFound
+// 		}
 
-		// ok. found node.
-		// update the node.
-		item := found.item
-		item.IsActive = true
+// 		// ok. found node.
+// 		// update the node.
+// 		item := found.item
+// 		item.IsActive = true
 
-		err := updateNode(&found, item)
-		if err != nil {
-			return BinaryNode{}, err
-		}
+// 		err := updateNode(&found, item)
+// 		if err != nil {
+// 			return BinaryNode{}, err
+// 		}
 
-		return *found, nil
-	default:
-		return BinaryNode{}, errors.New("[AVL]: invalid item status")
-	}
+// 		return *found, nil
+// 	default:
+// 		return BinaryNode{}, errors.New("[AVL]: invalid item status")
+// 	}
 
-}
+// }
 
-func (tree *AVL) Update(id string, updated models.User) (*BinaryNode, error) {
+func (tree *AVL) Update(id string, updated interface{}) (*BinaryNode, error) {
 
 	// err := updateNode(&found, item)
 	// if err != nil {
@@ -208,10 +168,11 @@ func (tree *AVL) Update(id string, updated models.User) (*BinaryNode, error) {
 
 	// ok. found node.
 	// update the node.
-	found.item.IsActive = updated.IsActive
-	found.item.Name.First = updated.Name.First
-	found.item.Name.Last = updated.Name.Last
-	found.item.Roles = updated.Roles
+	// found.item.IsActive = updated.IsActive
+	// found.item.Name.First = updated.Name.First
+	// found.item.Name.Last = updated.Name.Last
+	// found.item.Roles = updated.Roles
+	found.item = updated
 
 	return found, nil
 }

@@ -2,13 +2,10 @@ package stack
 
 import (
 	"errors"
-	"fmt"
-
-	"github.com/go-qiu/passer-auth-service/data/models"
 )
 
 type node struct {
-	item models.User
+	item interface{}
 	next *node
 }
 
@@ -46,7 +43,7 @@ func (s *Stack) GetTop() *node {
 }
 
 // wrapper function to push an item  (job) into the instantiated stack.
-func (s *Stack) Push(item models.User) error {
+func (s *Stack) Push(item interface{}) error {
 	newNode := &node{item: item, next: nil}
 
 	if s.top == nil {
@@ -71,7 +68,25 @@ func (s *Stack) Push(item models.User) error {
 /*
 	function to list all the node in the Stack
 */
-// func (s *Stack) ListAllNodes() error {
+func (s *Stack) ListAllNodesV2() ([]interface{}, error) {
+
+	if s.top == nil {
+		return nil, ErrEmptyStack
+	}
+
+	// ok. stack is not empty.
+	currentNode := s.top
+	users := []interface{}{}
+
+	for currentNode != nil {
+		users = append(users, currentNode.item)
+		currentNode = currentNode.next
+	}
+
+	return users, nil
+}
+
+// func (s *Stack) ListSelectedNodesByStatus(status string) error {
 
 // 	if s.top == nil {
 // 		return ErrEmptyStack
@@ -84,76 +99,31 @@ func (s *Stack) Push(item models.User) error {
 // 		count++
 // 		fmt.Printf("=================< Parcel Job Record # %04d - STARTS >=========\n", count)
 // 		fmt.Printf("|\n")
-// 		fmt.Printf("| User Email    : %s\n", currentNode.item.Id)
+// 		fmt.Printf("| User Email       : %s\n", currentNode.item.Id)
 // 		fmt.Printf("|--------------------------------------------------------------\n")
-// 		fmt.Printf("| Size          : %s\n", currentNode.item.Name.First)
-// 		fmt.Printf("| Status        : %s\n", currentNode.item.Name.Last)
+// 		fmt.Printf("| First Name       : %s\n", currentNode.item.Name.First)
+// 		fmt.Printf("| Last Name        : %s\n", currentNode.item.Name.Last)
 // 		fmt.Printf("|\n")
 // 		fmt.Printf("<<<<<<<<<<<<<<<<<< Parcel Job Record # %04d ENDS >>>>>>>>>>>>>>>>\n", count)
 // 		fmt.Println()
 // 		currentNode = currentNode.next
+// 	}
 
+// 	if count == 0 {
+// 		// empty after the filtering
+// 		return ErrEmptyStack
 // 	}
 
 // 	return nil
 // }
 
-func (s *Stack) ListAllNodesV2() ([]models.User, error) {
-
-	if s.top == nil {
-		return []models.User{}, ErrEmptyStack
-	}
-
-	// ok. stack is not empty.
-	currentNode := s.top
-	users := []models.User{}
-
-	for currentNode != nil {
-		users = append(users, currentNode.item)
-		currentNode = currentNode.next
-	}
-
-	return users, nil
-}
-
-func (s *Stack) ListSelectedNodesByStatus(status string) error {
-
-	if s.top == nil {
-		return ErrEmptyStack
-	}
-
-	// ok. stack is not empty
-	currentNode := s.top
-	count := 0
-	for currentNode != nil {
-		count++
-		fmt.Printf("=================< Parcel Job Record # %04d - STARTS >=========\n", count)
-		fmt.Printf("|\n")
-		fmt.Printf("| User Email       : %s\n", currentNode.item.Id)
-		fmt.Printf("|--------------------------------------------------------------\n")
-		fmt.Printf("| First Name       : %s\n", currentNode.item.Name.First)
-		fmt.Printf("| Last Name        : %s\n", currentNode.item.Name.Last)
-		fmt.Printf("|\n")
-		fmt.Printf("<<<<<<<<<<<<<<<<<< Parcel Job Record # %04d ENDS >>>>>>>>>>>>>>>>\n", count)
-		fmt.Println()
-		currentNode = currentNode.next
-	}
-
-	if count == 0 {
-		// empty after the filtering
-		return ErrEmptyStack
-	}
-
-	return nil
-}
-
 /*
 	function to pop a node from the top of the stack
 */
-func (s *Stack) Pop() (models.User, error) {
+func (s *Stack) Pop() (interface{}, error) {
 
 	if s.top == nil {
-		return models.User{}, ErrEmptyStack
+		return nil, ErrEmptyStack
 	}
 
 	// ok. the stack is not empty
@@ -172,11 +142,11 @@ func (s *Stack) Pop() (models.User, error) {
 /*
 	function to peek the Top noode of the Stack
 */
-func (s *Stack) Peek() (models.User, error) {
+func (s *Stack) Peek() (interface{}, error) {
 
 	if s.top == nil {
 		// stack is empty
-		return models.User{}, ErrEmptyStack
+		return nil, ErrEmptyStack
 	}
 
 	// ok. stack is not empty.
