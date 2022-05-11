@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/go-qiu/passer-auth-service/helpers"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -22,67 +21,6 @@ type contentToBeVerified struct {
 type outcome struct {
 	Ok   bool        `json:"ok"`
 	Data interface{} `json:"data"`
-}
-
-func signUp(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		username := r.FormValue("usrename")
-		password := r.FormValue("password")
-		confirmation := r.FormValue("confirmation")
-		first := r.FormValue("first")
-		last := r.FormValue("last")
-
-		// exceptions handling
-		if helpers.IsEmpty(username) {
-			http.Error(w, "Username cannot be empty.", http.StatusForbidden)
-			return
-		}
-		if helpers.IsEmpty(password) {
-			http.Error(w, "Password cannot be empty.", http.StatusForbidden)
-			return
-		}
-		if helpers.IsEmpty(confirmation) {
-			http.Error(w, "Password cannot be empty.", http.StatusForbidden)
-			return
-		}
-		if confirmation == password {
-			http.Error(w, "2 password entries are not the same.", http.StatusForbidden)
-			return
-		}
-		if helpers.IsEmpty(first) {
-			http.Error(w, "First Name cannot be empty.", http.StatusForbidden)
-			return
-		}
-		if helpers.IsEmpty(last) {
-			http.Error(w, "Last Name cannot be empty.", http.StatusForbidden)
-			return
-		}
-		if _, ok := mapUsers[username]; ok {
-			http.Error(w, "Username is already taken.", http.StatusForbidden)
-			return
-		}
-
-		// ok. ready.
-		pwhash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
-		if err != nil {
-			http.Error(w, "Internal Server Error.", http.StatusInternalServerError)
-			return
-		}
-		newUser := user{Username: username, PwHash: string(pwhash), First: first, Last: last}
-		mapUsers[username] = newUser
-
-		// redirect to post sign-up page
-		// http.Redirect(w, r, "/", http.StatusSeeOther)
-		w.Header().Set("Content-Type", "application/json")
-		outcome, err := json.Marshal(newUser)
-		if err != nil {
-			log.Println(err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-		fmt.Fprintln(w, outcome)
-		return
-	}
-	// tpl.ExecuteTemplate(w, "signup.html", user{})
 }
 
 // function to generate a hash for the string content passed in
