@@ -4,14 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/go-qiu/passer-auth-service/data"
-	"github.com/go-qiu/passer-auth-service/data/models"
 	"github.com/go-qiu/passer-auth-service/helpers"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -86,12 +83,12 @@ func init() {
 // handler for all users data related handling
 func Handler(w http.ResponseWriter, r *http.Request) {
 
+	// set the response header, "Content-Type" to "application/json".
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == http.MethodGet {
 		// 'GET' request
-		get(&w, r)
-		//
+		handleGetRequest(&w, r)
 	} else {
 		// not a 'GET' request
 
@@ -99,149 +96,30 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") == "application/json" {
 
 			// get the json content in the request body
-			body, err := ioutil.ReadAll(r.Body)
-			defer r.Body.Close()
+			body := getBody(&w, r)
 
-			if err != nil {
-				log.Println(err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
+			// ok. body content (in []byte format)
+			// is ready for further handling of POST, PUT, DELETE
+			// processing.
 			if r.Method == http.MethodPost {
+
 				// 'POST' request --> add
-
-				// parse the json content into a struct
-				// for easier handling
-				var paramsAdd paramsAdd
-				err = json.Unmarshal(body, &paramsAdd)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-				}
-				// ok. struct is ready.
-
-				// check if the user already existed.
-				existed := existed(paramsAdd.Email)
-				if existed {
-					// user email already existed
-					fmt.Fprintf(w, `{"ok": false, "msg": "%s", "data": {}}`, ErrUserExisted)
-					return
-				} else {
-					// user email is new
-					new, err := add(paramsAdd)
-
-					if err != nil {
-						fmt.Fprintln(w, `{"ok": false, "msg": "fail to add user", "data": {}}`)
-					}
-					fmt.Fprintf(w, `{"ok": true, "msg": "user added successfully", "data": %s}`, new)
-					return
-				}
-
-				//
+				handlePostRequest(&w, r, body)
 			} else if r.Method == http.MethodPut {
 
 				// 'PUT' request --> update
-				var paramsUpdate paramsUpdate
-				err = json.Unmarshal(body, &paramsUpdate)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-				}
-				updated, err := update(paramsUpdate)
-				if err != nil {
-					rtn := `{
-						"ok": false,
-						"msg": "fail to find user data to update",
-						"data": {}
-					}`
-					fmt.Fprintln(w, rtn)
-					return
-				}
-
-				// update successfully.
-				fmt.Fprintf(w, `{
-					"ok": true,
-					"msg": "successfully updated user data",
-					"data": %s
-				}
-				`, updated)
-				return
-				//
+				handlePutRequest(&w, r, body)
 			} else if r.Method == http.MethodDelete {
 
 				// 'DELETE' request --> remove
-				var paramsRemove paramsRemove
-				err = json.Unmarshal(body, &paramsRemove)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-				}
-				err = remove(paramsRemove.Email)
-				if err != nil {
-					rtn := `{
-						"ok" : false,
-						"msg" : "user not found",
-						"data" : {}	
-					}`
-					fmt.Fprintln(w, rtn)
-					return
-				}
-				rtn := `{
-					"ok" : true,
-					"msg" : "user removed successfully",
-					"data" : {}
-				}`
-				fmt.Fprintln(w, rtn)
-				return
-				//
+				handleDeleteRequest(&w, r, body)
 			} else {
 				// not any of the above methods.
 				msg := fmt.Sprintf("Request method, '%s' is not allowed for this api endpoint.\n", r.Method)
 				http.Error(w, msg, http.StatusForbidden)
 				return
 			}
-			//
 		}
-		//
-	}
-
-}
-
-// handler to get a specific user
-func get(w *http.ResponseWriter, r *http.Request) {
-
-	if r.Method != http.MethodGet {
-
-		// not a 'GET' request
-		msg := fmt.Sprintf("Request method, '%s' is not allowed for this api endpoint.", r.Method)
-		http.Error(*w, msg, http.StatusForbidden)
-		return
-	}
-
-	// ok. it is a 'GET' request.
-	// get the params passed in via the url
-	params := r.URL.Query()
-
-	if len(params) == 0 {
-		// no parameters were passed in via the url.
-		// list all users.
-		getAll(w, r)
-	}
-
-	if len(params) > 0 && len(strings.TrimSpace(params.Get("id"))) != 0 {
-		// id was passed in via the url
-		(*w).Header().Set("Content-Type", "application/json")
-		// get the user data point that matches the id
-		found, err := ds.Find(params.Get("id"))
-		if err != nil {
-			log.Println(err)
-			http.Error(*w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// ok.
-		user := found.GetItem()
-		rtn, _ := user.(models.User).ToJson(true)
-		fmt.Fprintln(*w, rtn)
-		return
 	}
 
 }

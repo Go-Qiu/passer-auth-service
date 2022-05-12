@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"github.com/go-qiu/passer-auth-service/data/models"
 	"github.com/go-qiu/passer-auth-service/data/stack"
@@ -197,4 +199,177 @@ func existed(email string) bool {
 
 	// found user data point
 	return true
+}
+
+// handler to get a specific user
+func handleGetRequest(w *http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodGet {
+
+		// not a 'GET' request
+		msg := fmt.Sprintf("Request method, '%s' is not allowed for this api endpoint.", r.Method)
+		http.Error(*w, msg, http.StatusForbidden)
+		return
+	}
+
+	// ok. it is a 'GET' request.
+	// get the params passed in via the url
+	params := r.URL.Query()
+
+	if len(params) == 0 {
+		// no parameters were passed in via the url.
+		// list all users.
+		getAll(w, r)
+	}
+
+	if len(params) > 0 && len(strings.TrimSpace(params.Get("id"))) != 0 {
+		// id was passed in via the url
+		(*w).Header().Set("Content-Type", "application/json")
+		// get the user data point that matches the id
+		found, err := ds.Find(params.Get("id"))
+		if err != nil {
+			log.Println(err)
+			http.Error(*w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// ok.
+		user := found.GetItem()
+		rtn, _ := user.(models.User).ToJson(true)
+		fmt.Fprintln(*w, rtn)
+		return
+	}
+
+}
+
+// function to check if value passed in is empty.
+func isEmptyString(v string) bool {
+	return len(strings.TrimSpace(v)) == 0
+}
+
+func isValidEmailFormat(v string) bool {
+	pattern := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
+	return pattern.MatchString(v)
+}
+
+// function to handle the post request
+func handlePostRequest(w *http.ResponseWriter, r *http.Request, body []byte) {
+
+	// parse the json content into a struct
+	// for easier handling
+	var paramsAdd paramsAdd
+	err := json.Unmarshal(body, &paramsAdd)
+	if err != nil {
+		http.Error(*w, err.Error(), http.StatusInternalServerError)
+	}
+
+	// ok. struct is ready.
+
+	// check if email value is empty
+	if isEmptyString(paramsAdd.Email) {
+		http.Error(*w, "email is a required attribute", http.StatusBadRequest)
+		return
+	}
+
+	if isEmptyString(paramsAdd.Name.First) {
+		http.Error(*w, "name.first is a required attribute", http.StatusBadRequest)
+		return
+	}
+
+	if isEmptyString(paramsAdd.Name.Last) {
+		http.Error(*w, "name.last is a required attribute", http.StatusBadRequest)
+		return
+	}
+
+	// check if email value is in a proper email format (e.g. joe.jet@motel168.com)
+	if !isValidEmailFormat(paramsAdd.Email) {
+		http.Error(*w, "email is not a valid format", http.StatusBadRequest)
+		return
+	}
+
+	// check if the user already existed.
+	existed := existed(paramsAdd.Email)
+	if existed {
+		// user email already existed
+		fmt.Fprintf(*w, `{"ok": false, "msg": "%s", "data": {}}`, ErrUserExisted)
+		return
+	} else {
+		// user email is new
+		new, err := add(paramsAdd)
+
+		if err != nil {
+			fmt.Fprintln(*w, `{"ok": false, "msg": "fail to add user", "data": {}}`)
+		}
+		fmt.Fprintf(*w, `{"ok": true, "msg": "user added successfully", "data": %s}`, new)
+		return
+	}
+}
+
+// function to handle the put request
+func handlePutRequest(w *http.ResponseWriter, r *http.Request, body []byte) {
+
+	var paramsUpdate paramsUpdate
+	err := json.Unmarshal(body, &paramsUpdate)
+	if err != nil {
+		http.Error(*w, err.Error(), http.StatusInternalServerError)
+	}
+	updated, err := update(paramsUpdate)
+	if err != nil {
+		rtn := `{
+			"ok": false,
+			"msg": "fail to find user data to update",
+			"data": {}
+		}`
+		fmt.Fprintln(*w, rtn)
+		return
+	}
+
+	// update successfully.
+	fmt.Fprintf(*w, `{
+		"ok": true,
+		"msg": "successfully updated user data",
+		"data": %s
+	}
+	`, updated)
+	//
+}
+
+func handleDeleteRequest(w *http.ResponseWriter, r *http.Request, body []byte) {
+
+	var paramsRemove paramsRemove
+	err := json.Unmarshal(body, &paramsRemove)
+	if err != nil {
+		http.Error(*w, err.Error(), http.StatusInternalServerError)
+	}
+	err = remove(paramsRemove.Email)
+	if err != nil {
+		rtn := `{
+			"ok" : false,
+			"msg" : "user not found",
+			"data" : {}	
+		}`
+		fmt.Fprintln(*w, rtn)
+		return
+	}
+	rtn := `{
+		"ok" : true,
+		"msg" : "user removed successfully",
+		"data" : {}
+	}`
+	fmt.Fprintln(*w, rtn)
+}
+
+// function to get the content of the request body.
+func getBody(w *http.ResponseWriter, r *http.Request) []byte {
+	body, err := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+
+	if err != nil {
+		log.Println(err)
+		http.Error(*w, err.Error(), http.StatusInternalServerError)
+		return nil
+	}
+
+	// ok.
+	return body
 }
