@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"regexp"
 	"strings"
 
 	"github.com/go-qiu/passer-auth-service/data/models"
@@ -242,16 +241,6 @@ func handleGetRequest(w *http.ResponseWriter, r *http.Request) {
 
 }
 
-// function to check if value passed in is empty.
-func isEmptyString(v string) bool {
-	return len(strings.TrimSpace(v)) == 0
-}
-
-func isValidEmailFormat(v string) bool {
-	pattern := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
-	return pattern.MatchString(v)
-}
-
 // function to handle the post request
 func handlePostRequest(w *http.ResponseWriter, r *http.Request, body []byte) {
 
@@ -271,19 +260,38 @@ func handlePostRequest(w *http.ResponseWriter, r *http.Request, body []byte) {
 		return
 	}
 
+	// check if first name value is empty
 	if isEmptyString(paramsAdd.Name.First) {
 		http.Error(*w, "name.first is a required attribute", http.StatusBadRequest)
 		return
 	}
 
+	// check if last name value is empty
 	if isEmptyString(paramsAdd.Name.Last) {
 		http.Error(*w, "name.last is a required attribute", http.StatusBadRequest)
+		return
+	}
+
+	// check if password value is empty
+	if isEmptyString(paramsAdd.Password) {
+		http.Error(*w, "password is a required attribute", http.StatusBadRequest)
 		return
 	}
 
 	// check if email value is in a proper email format (e.g. joe.jet@motel168.com)
 	if !isValidEmailFormat(paramsAdd.Email) {
 		http.Error(*w, "email is not a valid format", http.StatusBadRequest)
+		return
+	}
+
+	// check if roles value is nil (or empty)
+	if isEmptyStringSlice(paramsAdd.Roles) {
+		http.Error(*w, "roles is a required attribute and must not be empty", http.StatusBadRequest)
+		return
+	}
+
+	if areValidRoles(paramsAdd.Roles) {
+		http.Error(*w, "roles must contain valid values", http.StatusBadRequest)
 		return
 	}
 

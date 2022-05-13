@@ -19,6 +19,7 @@ func main() {
 	mux.HandleFunc("/auth", users.Auth)
 	// mux.HandleFunc("/hash", handleHash)
 
-	log.Printf("HTTP Server is started and listening at %s ...\n", addr)
-	log.Fatalln(http.ListenAndServe(addr, mux))
+	log.Printf("HTTPS Server is started and listening at %s ...\n", addr)
+	// log.Fatalln(http.ListenAndServe(addr, mux))
+	log.Fatalln(http.ListenAndServeTLS(addr, "./ssl/cert.pem", "./ssl/key.pem", mux))
 }

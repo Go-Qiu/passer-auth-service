@@ -49,14 +49,6 @@ type paramsUpdate struct {
 	Updates updateableFields `json:"updates"`
 }
 
-// type outUser struct {
-// 	Id       string `json:"id"`
-// 	Email    string `json:"email"`
-// 	Name     name   `json:"name"`
-// 	IsActive bool   `json:"isActive"`
-// 	Roles    bool   `json:"roles"`
-// }
-
 var (
 	ErrAuthFail                error = errors.New("[API-Users]: authentication failure")
 	ErrNotAllowedRequestMethod error = errors.New("[API-Users]: requst method is not allowed for this endpoint")
@@ -175,15 +167,15 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		last := r.FormValue("last")
 
 		// exceptions handling
-		if helpers.IsEmpty(username) {
+		if isEmptyString(username) {
 			http.Error(w, "Username cannot be empty.", http.StatusForbidden)
 			return
 		}
-		if helpers.IsEmpty(password) {
+		if isEmptyString(password) {
 			http.Error(w, "Password cannot be empty.", http.StatusForbidden)
 			return
 		}
-		if helpers.IsEmpty(confirmation) {
+		if isEmptyString(confirmation) {
 			http.Error(w, "Password cannot be empty.", http.StatusForbidden)
 			return
 		}
@@ -191,11 +183,11 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "2 password entries are not the same.", http.StatusForbidden)
 			return
 		}
-		if helpers.IsEmpty(first) {
+		if isEmptyString(first) {
 			http.Error(w, "First Name cannot be empty.", http.StatusForbidden)
 			return
 		}
-		if helpers.IsEmpty(last) {
+		if isEmptyString(last) {
 			http.Error(w, "Last Name cannot be empty.", http.StatusForbidden)
 			return
 		}
