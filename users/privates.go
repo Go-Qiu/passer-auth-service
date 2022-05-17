@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-qiu/passer-auth-service/data/models"
 	"github.com/go-qiu/passer-auth-service/data/stack"
+	"github.com/go-qiu/passer-auth-service/jwt"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -115,6 +116,26 @@ func execAuth(r *http.Request) (string, error) {
 
 		return userJsonString, nil
 	}
+}
+
+// generateJWT will generate a JWT using the header and payload passed in.
+func generateJWT(payload JWTPayload) (string, error) {
+
+	// secret key to use "P@ss3r.54321"
+	header := `{
+		"alg": "SHA512",
+		"typ" : "JWT"
+	}`
+
+	// convert payload data to json string
+	pl, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+
+	token := jwt.Generate(header, string(pl), "P@ss3r.54321")
+
+	return token, nil
 }
 
 // function to add a user

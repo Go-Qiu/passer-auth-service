@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-qiu/passer-auth-service/data"
 	"github.com/go-qiu/passer-auth-service/helpers"
@@ -47,6 +48,22 @@ type updateableFields struct {
 type paramsUpdate struct {
 	Email   string           `json:"email"`
 	Updates updateableFields `json:"updates"`
+}
+
+// JWTPayload is the struct for holding the data used in generating the second segment of the JWT string.
+type JWTPayload struct {
+	Id       string   `json:"id"`
+	Name     string   `json:"name"`
+	Roles    []string `json:"roles"`
+	IsActive bool     `json:"isActive"`
+	Iss      string   `json:"iss"`
+	Exp      int64    `json:"exp"`
+}
+
+// JWTHeader is the struct for holding the data used in generating the first segment of the JWT string.
+type JWTHeader struct {
+	Alg string `json:"alg"`
+	Typ string `json:"typ"`
 }
 
 var (
@@ -149,11 +166,48 @@ func Auth(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// ok.
+		type outcomeUser struct {
+			Id       string
+			Email    string
+			IsActive bool
+			Roles    []string
+			Name     struct {
+				First string
+				Last  string
+			}
+		}
+
+		var out outcomeUser
+		err = json.Unmarshal([]byte(outcome), &out)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		exp := time.Now().Add(time.Minute * 30).UnixMilli()
+		pl := JWTPayload{
+			Id:       out.Email,
+			Name:     out.Name.First + " " + out.Name.Last,
+			Roles:    out.Roles,
+			IsActive: out.IsActive,
+			Iss:      "PASSER",
+			Exp:      exp,
+		}
+
+		var token string
+		token, err = generateJWT(pl)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		fmt.Fprintf(w, `{
 			"ok" : true,
 			"msg" : "[AUTH]: authentication ok",
-			"data" : %s
-		}`, outcome)
+			"data" : {
+				"token" : "%s"
+			}
+		}`, token)
 		return
 	}
 }
