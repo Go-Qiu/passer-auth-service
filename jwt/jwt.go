@@ -4,19 +4,19 @@ Package jwt is a custom inplementation of the well known JWT algorithm.  This cu
 package jwt
 
 import (
+	"crypto/sha512"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"strings"
-
-	"golang.org/x/crypto/sha3"
 )
 
 var ErrEmptyToken = errors.New("[JWT]: jwt cannot be empty")
 var ErrEmptyKey = errors.New("[JWT]: signing key cannot be empty")
 var ErrWrongFormat = errors.New("[JWT]: wrong token format")
-var ErrEmptyJWTHeader = errors.New("[JWT]: jwt header is empty.")
-var ErrEmptyJWTPayload = errors.New("[JWT]: jwt payload is empty.")
-var ErrEmptyJWTSignature = errors.New("[JWT]: jwt signature is empty.")
+var ErrEmptyJWTHeader = errors.New("[JWT]: jwt header is empty")
+var ErrEmptyJWTPayload = errors.New("[JWT]: jwt payload is empty")
+var ErrEmptyJWTSignature = errors.New("[JWT]: jwt signature is empty")
 
 // Generate creates a JWT JSON string using the parameters passed in.
 // Input parameters:
@@ -33,28 +33,16 @@ func Generate(header string, payload string, key string) string {
 	inputs = append(inputs, []byte(header))
 	inputs = append(inputs, []byte(payload))
 
-	t := []string{}
+	tB64s := []string{}
 
 	for s := range b64Encode(inputs) {
-		t = append(t, s)
+		tB64s = append(tB64s, s)
 	}
 
 	// combine all the string in ths slice
-	ts := strings.Join(t, "") + key
-
-	hasher := sha3.New512()
-	hasher.Write([]byte(ts))
-	h := hasher.Sum(nil)
-
-	signs := [][]byte{}
-	signs = append(signs, h)
-
-	signsB64 := []string{}
-	for sign := range b64Encode(signs) {
-		signsB64 = append(signsB64, sign)
-	}
-
-	token := strings.Join(t, ".") + "." + signsB64[0]
+	tB64String := strings.Join(tB64s, "")
+	signsB64 := generateSignature(tB64String, key)
+	token := strings.Join(tB64s, ".") + "." + signsB64
 
 	return token
 }
@@ -103,7 +91,7 @@ func Verify(jwt string, key string) (bool, error) {
 	}
 
 	// ok.
-	payloadB64 := strings.Join(ts, "")
+	payloadB64 := ts[0] + ts[1]
 	signatureB64 := generateSignature(payloadB64, key)
 
 	if signatureB64 == ts[2] {
@@ -138,22 +126,23 @@ func b64Encode(input [][]byte) chan string {
 // genrateSignature signs the Base64 encoded payload, payloadB64 , with the key using SHA3 512 hasing function.  It returns a Base64 encoded signature string.
 func generateSignature(payloadB64 string, key string) string {
 
-	// append the key to payloadB64
-	payload := payloadB64 + key
+	combined := payloadB64 + key
 
-	// generate a hash using SHA3 512 hashing function
-	hasher := sha3.New512()
-	hasher.Write([]byte(payload))
-	h := hasher.Sum(nil)
+	// generate a hash using SHA2-512 hashing function
 
-	// convert the signature into a Base64 string.
-	signs := [][]byte{}
-	signs = append(signs, h)
+	hash3 := sha512.Sum512([]byte(combined))
+	hash3Bytes := hash3[:]
+	hash3String := hex.EncodeToString(hash3Bytes)
+
+	inputs := [][]byte{}
+
+	inputs = append(inputs, []byte(hash3String))
 
 	signsB64 := []string{}
-	for sign := range b64Encode(signs) {
+	for sign := range b64Encode(inputs) {
 		signsB64 = append(signsB64, sign)
 	}
+	// hash3B64 := base64.StdEncoding.EncodeToString(hash3Bytes)
 
 	return signsB64[0]
 }

@@ -2,15 +2,21 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/go-qiu/passer-auth-service/data"
 	"github.com/go-qiu/passer-auth-service/data/models"
 	"github.com/go-qiu/passer-auth-service/jwt"
+	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 )
+
+var ErrEnvNotLoaded = errors.New("[JWT]: fail to load the env file")
+var ErrPayloadParsing = errors.New("[JWT]: fail to parse payload")
 
 // paramsAuth type struct is used for unmarshalling
 // the json send via the request body sent to the
@@ -63,7 +69,13 @@ func execAuth(ds *data.DataStore, r *http.Request) (string, error) {
 // generateJWT will generate a JWT using the header and payload passed in.
 func generateJWT(payload JWTPayload) (string, error) {
 
-	// secret key to use "P@ss3r.54321"
+	// get .env values
+	err := godotenv.Load()
+	if err != nil {
+		return "", ErrEnvNotLoaded
+	}
+	JWT_SECRET_KEY := os.Getenv("JWT_SECRET_KEY")
+
 	header := `{
 		"alg": "SHA512",
 		"typ" : "JWT"
@@ -72,10 +84,10 @@ func generateJWT(payload JWTPayload) (string, error) {
 	// convert payload data to json string
 	pl, err := json.Marshal(payload)
 	if err != nil {
-		return "", err
+		return "", ErrPayloadParsing
 	}
 
-	token := jwt.Generate(header, string(pl), "P@ss3r.54321")
+	token := jwt.Generate(header, string(pl), JWT_SECRET_KEY)
 
 	return token, nil
 }
