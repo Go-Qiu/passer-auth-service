@@ -7,13 +7,12 @@ import (
 
 	"github.com/go-qiu/passer-auth-service/data"
 	"github.com/go-qiu/passer-auth-service/helpers"
+	"github.com/joho/godotenv"
 )
 
 var ds data.DataStore = *data.New()
 
 func main() {
-
-	addr := "localhost:8081"
 
 	// Simulate a data pull of PASSER Locker Station
 	// specific Parcel Job records from the HQ Data Center.
@@ -31,6 +30,15 @@ func main() {
 	// declare custom loggers
 	infoLog := log.New(os.Stdout, "[INFO]\t", log.Ldate|log.Ltime)
 	errorLog := log.New(os.Stderr, "[ERROR]\t", log.Ldate|log.Ltime|log.Lshortfile)
+
+	// get .env values
+	err = godotenv.Load()
+	if err != nil {
+		errString := "[JWT]: fail to load .env"
+		errorLog.Fatalln(errString)
+		return
+	}
+	addr := os.Getenv("SERVER_ADDR")
 
 	// declare and instantiate a web application
 	app := &application{

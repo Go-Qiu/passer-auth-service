@@ -5,9 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-qiu/passer-auth-service/data/models"
+	"github.com/go-qiu/passer-auth-service/jwt"
+	"github.com/go-qiu/passer-auth-service/users"
+	"github.com/joho/godotenv"
 )
 
 var (
@@ -19,12 +23,23 @@ var (
 // Auth is a http handler for the 'POST' request to authenticate the user credentials, passed in via the request body.
 func (a *application) Auth(w http.ResponseWriter, r *http.Request) {
 
+	// get .env values
+	err := godotenv.Load()
+	if err != nil {
+		errString := "[JWT]: fail to load .env"
+		a.errorLog.Println(errString)
+		a.clientError(w, http.StatusInternalServerError, errString)
+		return
+	}
+	JWT_ISSUER := os.Getenv("JWT_ISSUER")
+
+	// Only allow a 'POST' requst to continue.
 	if r.Method != http.MethodPost {
 
 		// not a 'POST' request
-		msg := fmt.Sprintf("Request method, '%s' is not allowed for this api endpoint.", r.Method)
+		msg := fmt.Sprintf("[AUTH]: request method, '%s' is not allowed for this api endpoint", r.Method)
 		// http.Error(w, msg, http.StatusForbidden)
-		a.clientError(w, http.StatusInternalServerError, msg)
+		a.clientError(w, http.StatusBadRequest, msg)
 		return
 	}
 
@@ -70,12 +85,12 @@ func (a *application) Auth(w http.ResponseWriter, r *http.Request) {
 		}
 
 		exp := time.Now().Add(time.Minute * 30).UnixMilli()
-		pl := JWTPayload{
+		pl := jwt.JWTPayload{
 			Id:       foundUser.Email,
 			Name:     foundUser.Name.First + " " + foundUser.Name.Last,
 			Roles:    foundUser.Roles,
 			IsActive: foundUser.IsActive,
-			Iss:      "PASSER",
+			Iss:      JWT_ISSUER,
 			Exp:      exp,
 		}
 
@@ -93,16 +108,15 @@ func (a *application) Auth(w http.ResponseWriter, r *http.Request) {
 				"token" : "%s"
 			}
 		}`, token)
+
+		w.Header().Set("Token", token)
 		fmt.Fprintln(w, msg)
 		return
-
 	}
 	//
 }
 
-// ValidateJWT is a middleware that will intercept an incoming request to a protected endpoint; validate the JWT token passed via the request header. If the validation fails, a http error will be sent back to the requestor.
-// func (a *application) ValidateJWT(next func(w http.ResponseWriter, r *http.Request)) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func (a *application) Users(w http.ResponseWriter, r *http.Request) {
 
-// 	})
-// }
+	users.Handler(w, r, a.dataStore)
+}

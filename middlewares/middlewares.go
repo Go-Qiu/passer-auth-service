@@ -1,4 +1,4 @@
-package main
+package middlewares
 
 import (
 	"fmt"
@@ -11,7 +11,12 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func validateJWT(next http.Handler) http.Handler {
+// ValidateJWT is a middleware that will in check for the presence of a 'Token' attribute in the request header.
+// It will permist the request to continue its flow to the secureed api endpoint if the 'Token' is present and valid.
+// A valid 'Token' must satisfy the following:
+// - the signature segment of the 'Token' must be consistent when this middleware signs the content of the Header and Payload segments (of the 'Token') with the secret key;
+// - the 'exp' attribute in the Payload (encoded in Base64 format) has not come to pass.
+func ValidateJWT(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// declare custom loggers

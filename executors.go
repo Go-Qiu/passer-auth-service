@@ -67,7 +67,7 @@ func execAuth(ds *data.DataStore, r *http.Request) (string, error) {
 }
 
 // generateJWT will generate a JWT using the header and payload passed in.
-func generateJWT(payload JWTPayload) (string, error) {
+func generateJWT(payload jwt.JWTPayload) (string, error) {
 
 	// get .env values
 	err := godotenv.Load()

@@ -2,25 +2,24 @@ package users
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
+	"github.com/go-qiu/passer-auth-service/data"
 	"github.com/go-qiu/passer-auth-service/data/models"
 	"github.com/go-qiu/passer-auth-service/data/stack"
 	"github.com/go-qiu/passer-auth-service/jwt"
+	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type paramsAuth struct {
-	Email string `json:"email"`
-	Pw    string `json:"pw"`
-}
-
-// function to list all the users (without the pwhash)
-func getAll(w *http.ResponseWriter, r *http.Request) {
+// getAll lists all the users (without the pwhash attribute)
+func getAll(w *http.ResponseWriter, r *http.Request, ds *data.DataStore) {
 
 	if r.Method != http.MethodGet {
 		// not a 'GET' request
@@ -78,8 +77,8 @@ func getAll(w *http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// function to execute the authentication check
-func execAuth(r *http.Request) (string, error) {
+// execAuth executes the authentication check
+func execAuth(r *http.Request, ds *data.DataStore) (string, error) {
 
 	var params paramsAuth
 	b, err := ioutil.ReadAll(r.Body)
@@ -119,7 +118,15 @@ func execAuth(r *http.Request) (string, error) {
 }
 
 // generateJWT will generate a JWT using the header and payload passed in.
-func generateJWT(payload JWTPayload) (string, error) {
+func generateJWT(payload jwt.JWTPayload) (string, error) {
+
+	// get .env values
+	err := godotenv.Load()
+	if err != nil {
+		errString := "[JWT]: fail to load .env"
+		return "", errors.New(errString)
+	}
+	JWT_SECRET_KEY := os.Getenv("JWT_SECRET_KEY")
 
 	// secret key to use "P@ss3r.54321"
 	header := `{
@@ -133,13 +140,13 @@ func generateJWT(payload JWTPayload) (string, error) {
 		return "", err
 	}
 
-	token := jwt.Generate(header, string(pl), "P@ss3r.54321")
+	token := jwt.Generate(header, string(pl), JWT_SECRET_KEY)
 
 	return token, nil
 }
 
-// function to add a user
-func add(p paramsAdd) (string, error) {
+// add a user
+func add(ds *data.DataStore, p paramsAdd) (string, error) {
 
 	var u models.User
 
@@ -175,8 +182,8 @@ func add(p paramsAdd) (string, error) {
 	return string(rtn), nil
 }
 
-// function to update a user
-func update(p paramsUpdate) (string, error) {
+// update a user
+func update(ds *data.DataStore, p paramsUpdate) (string, error) {
 
 	updates := models.User{}
 	updates.Id = p.Email
@@ -198,8 +205,8 @@ func update(p paramsUpdate) (string, error) {
 	return string(u), nil
 }
 
-// function to remove a user
-func remove(email string) error {
+// remove a user
+func remove(ds *data.DataStore, email string) error {
 
 	err := ds.Remove(email)
 	if err != nil {
@@ -209,9 +216,9 @@ func remove(email string) error {
 	return nil
 }
 
-// function to check (by email) if a data point (i.e. user)
+// existed checks (by email) if a data point (i.e. user)
 // existed in the in-memory data store.
-func existed(email string) bool {
+func existed(ds *data.DataStore, email string) bool {
 	found, err := ds.Find(email)
 	if err != nil && found == nil {
 		return false
@@ -221,8 +228,8 @@ func existed(email string) bool {
 	return true
 }
 
-// handler to get a specific user
-func handleGetRequest(w *http.ResponseWriter, r *http.Request) {
+// handleGetRequest handlers a get request to get a specific user
+func handleGetRequest(w *http.ResponseWriter, r *http.Request, ds *data.DataStore) {
 
 	if r.Method != http.MethodGet {
 
@@ -239,7 +246,7 @@ func handleGetRequest(w *http.ResponseWriter, r *http.Request) {
 	if len(params) == 0 {
 		// no parameters were passed in via the url.
 		// list all users.
-		getAll(w, r)
+		getAll(w, r, ds)
 	}
 
 	if len(params) > 0 && len(strings.TrimSpace(params.Get("id"))) != 0 {
@@ -262,8 +269,8 @@ func handleGetRequest(w *http.ResponseWriter, r *http.Request) {
 
 }
 
-// function to handle the post request
-func handlePostRequest(w *http.ResponseWriter, r *http.Request, body []byte) {
+// handlePostRequst handles the post request to add a user
+func handlePostRequest(w *http.ResponseWriter, r *http.Request, ds *data.DataStore, body []byte) {
 
 	// parse the json content into a struct
 	// for easier handling
@@ -317,14 +324,14 @@ func handlePostRequest(w *http.ResponseWriter, r *http.Request, body []byte) {
 	}
 
 	// check if the user already existed.
-	existed := existed(paramsAdd.Email)
+	existed := existed(ds, paramsAdd.Email)
 	if existed {
 		// user email already existed
 		fmt.Fprintf(*w, `{"ok": false, "msg": "%s", "data": {}}`, ErrUserExisted)
 		return
 	} else {
 		// user email is new
-		new, err := add(paramsAdd)
+		new, err := add(ds, paramsAdd)
 
 		if err != nil {
 			fmt.Fprintln(*w, `{"ok": false, "msg": "fail to add user", "data": {}}`)
@@ -334,15 +341,15 @@ func handlePostRequest(w *http.ResponseWriter, r *http.Request, body []byte) {
 	}
 }
 
-// function to handle the put request
-func handlePutRequest(w *http.ResponseWriter, r *http.Request, body []byte) {
+// handlePutRequest handles the put request to update a user
+func handlePutRequest(w *http.ResponseWriter, r *http.Request, ds *data.DataStore, body []byte) {
 
 	var paramsUpdate paramsUpdate
 	err := json.Unmarshal(body, &paramsUpdate)
 	if err != nil {
 		http.Error(*w, err.Error(), http.StatusInternalServerError)
 	}
-	updated, err := update(paramsUpdate)
+	updated, err := update(ds, paramsUpdate)
 	if err != nil {
 		rtn := `{
 			"ok": false,
@@ -363,14 +370,15 @@ func handlePutRequest(w *http.ResponseWriter, r *http.Request, body []byte) {
 	//
 }
 
-func handleDeleteRequest(w *http.ResponseWriter, r *http.Request, body []byte) {
+// handleDeleteRequest handles the delete request to delete a user
+func handleDeleteRequest(w *http.ResponseWriter, r *http.Request, ds *data.DataStore, body []byte) {
 
 	var paramsRemove paramsRemove
 	err := json.Unmarshal(body, &paramsRemove)
 	if err != nil {
 		http.Error(*w, err.Error(), http.StatusInternalServerError)
 	}
-	err = remove(paramsRemove.Email)
+	err = remove(ds, paramsRemove.Email)
 	if err != nil {
 		rtn := `{
 			"ok" : false,
@@ -388,7 +396,7 @@ func handleDeleteRequest(w *http.ResponseWriter, r *http.Request, body []byte) {
 	fmt.Fprintln(*w, rtn)
 }
 
-// function to get the content of the request body.
+// getBody gets the content of the request body.
 func getBody(w *http.ResponseWriter, r *http.Request) []byte {
 	body, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()

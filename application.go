@@ -2,21 +2,13 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"runtime/debug"
 
-	"github.com/go-qiu/passer-auth-service/data"
-	"github.com/go-qiu/passer-auth-service/users"
+	"github.com/go-qiu/passer-auth-service/middlewares"
 )
 
-type application struct {
-	errorLog  *log.Logger
-	infoLog   *log.Logger
-	dataStore *data.DataStore
-}
-
-// serverError
+// serverError will log server side errors and send a HTTP Internal Server Error to the requestor.
 func (a *application) serverError(w http.ResponseWriter, err error) {
 	// log the error on the server side
 	trace := fmt.Sprintf("%s\n%s", err.Error(), debug.Stack())
@@ -44,10 +36,7 @@ func (a *application) routes() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// fixed path patterns
-	mux.Handle("/users", validateJWT(http.HandlerFunc(users.Handler)))
-	mux.HandleFunc("/signup", users.SignUp)
-	// mux.HandleFunc("/users", users.Handler)
 	mux.HandleFunc("/auth", a.Auth)
-
+	mux.Handle("/users", middlewares.ValidateJWT(http.HandlerFunc(a.Users)))
 	return mux
 }

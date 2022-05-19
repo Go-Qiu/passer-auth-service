@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/go-qiu/passer-auth-service/data"
-	"github.com/go-qiu/passer-auth-service/helpers"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -72,30 +70,29 @@ var (
 )
 
 // var userList []models.User
-var ds data.DataStore = *data.New()
+// var ds data.DataStore = *data.New()
 
-func init() {
+// func init() {
 
-	userList, err := helpers.Preload()
-	if err != nil {
-		log.Fatalln(err)
-	}
+// 	userList, err := helpers.Preload()
+// 	if err != nil {
+// 		log.Fatalln(err)
+// 	}
 
-	for _, u := range userList {
-		ds.InsertNode(u, u.Email)
-	}
+// 	for _, u := range userList {
+// 		ds.InsertNode(u, u.Email)
+// 	}
+// }
 
-}
-
-// handler for all users data related handling
-func Handler(w http.ResponseWriter, r *http.Request) {
+// Handler handles all users data related data operations.
+func Handler(w http.ResponseWriter, r *http.Request, ds *data.DataStore) {
 
 	// set the response header, "Content-Type" to "application/json".
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == http.MethodGet {
 		// 'GET' request
-		handleGetRequest(&w, r)
+		handleGetRequest(&w, r, ds)
 	} else {
 		// not a 'GET' request
 
@@ -111,15 +108,15 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			if r.Method == http.MethodPost {
 
 				// 'POST' request --> add
-				handlePostRequest(&w, r, body)
+				handlePostRequest(&w, r, ds, body)
 			} else if r.Method == http.MethodPut {
 
 				// 'PUT' request --> update
-				handlePutRequest(&w, r, body)
+				handlePutRequest(&w, r, ds, body)
 			} else if r.Method == http.MethodDelete {
 
 				// 'DELETE' request --> remove
-				handleDeleteRequest(&w, r, body)
+				handleDeleteRequest(&w, r, ds, body)
 			} else {
 				// not any of the above methods.
 				msg := fmt.Sprintf("Request method, '%s' is not allowed for this api endpoint.\n", r.Method)
@@ -131,85 +128,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// handler to authenticate a user
-func Auth(w http.ResponseWriter, r *http.Request) {
-
-	if r.Method != http.MethodPost {
-		// not a 'POST' request
-		msg := fmt.Sprintf("Request method, '%s' is not allowed for this api endpoint.", r.Method)
-		http.Error(w, msg, http.StatusForbidden)
-		return
-	}
-
-	// ok. it is a 'POST' request.
-	if r.Header.Get("Content-Type") == "application/json" {
-		// json data is in the request body.
-		// get the json passed in.
-		w.Header().Set("Content-Type", "application/json")
-		outcome, err := execAuth(r)
-		if err != nil {
-			if err != ErrAuthFail {
-				log.Println(err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			} else {
-				// auth failure
-				fmt.Fprintf(w, `{
-					"ok" : false,
-					"msg" : "[AUTH]: authentication failed",
-					"data" : {}
-				}`)
-				return
-			}
-		}
-
-		// ok.
-		type outcomeUser struct {
-			Id       string
-			Email    string
-			IsActive bool
-			Roles    []string
-			Name     struct {
-				First string
-				Last  string
-			}
-		}
-
-		var out outcomeUser
-		err = json.Unmarshal([]byte(outcome), &out)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		exp := time.Now().Add(time.Minute * 30).UnixMilli()
-		pl := JWTPayload{
-			Id:       out.Email,
-			Name:     out.Name.First + " " + out.Name.Last,
-			Roles:    out.Roles,
-			IsActive: out.IsActive,
-			Iss:      "PASSER",
-			Exp:      exp,
-		}
-
-		var token string
-		token, err = generateJWT(pl)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		fmt.Fprintf(w, `{
-			"ok" : true,
-			"msg" : "[AUTH]: authentication ok",
-			"data" : {
-				"token" : "%s"
-			}
-		}`, token)
-		return
-	}
-}
-
+// Signup handles request to add a user. WIP.
 func SignUp(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		username := r.FormValue("usrename")
