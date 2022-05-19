@@ -16,10 +16,11 @@ var (
 	ErrUserExisted             error = errors.New("[API-Users]: user already existed")
 )
 
-//Auth is a http handler for the 'POST' request to authenticate the user credentials, passed in via the request body.
+// Auth is a http handler for the 'POST' request to authenticate the user credentials, passed in via the request body.
 func (a *application) Auth(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
+
 		// not a 'POST' request
 		msg := fmt.Sprintf("Request method, '%s' is not allowed for this api endpoint.", r.Method)
 		// http.Error(w, msg, http.StatusForbidden)
@@ -96,6 +97,12 @@ func (a *application) Auth(w http.ResponseWriter, r *http.Request) {
 		return
 
 	}
-
 	//
 }
+
+// ValidateJWT is a middleware that will intercept an incoming request to a protected endpoint; validate the JWT token passed via the request header. If the validation fails, a http error will be sent back to the requestor.
+// func (a *application) ValidateJWT(next func(w http.ResponseWriter, r *http.Request)) http.Handler {
+// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+// 	})
+// }

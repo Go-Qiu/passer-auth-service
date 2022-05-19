@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/go-qiu/passer-auth-service/data"
@@ -79,8 +78,7 @@ func init() {
 
 	userList, err := helpers.Preload()
 	if err != nil {
-		log.Println(err)
-		os.Exit(1)
+		log.Fatalln(err)
 	}
 
 	for _, u := range userList {

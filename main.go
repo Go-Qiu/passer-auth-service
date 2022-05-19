@@ -9,9 +9,7 @@ import (
 	"github.com/go-qiu/passer-auth-service/helpers"
 )
 
-func init() {
-
-}
+var ds data.DataStore = *data.New()
 
 func main() {
 
@@ -20,7 +18,7 @@ func main() {
 	// Simulate a data pull of PASSER Locker Station
 	// specific Parcel Job records from the HQ Data Center.
 	// The records are inserted into the local data store.
-	var ds data.DataStore = *data.New()
+
 	userList, err := helpers.Preload()
 	if err != nil {
 		log.Println(err)

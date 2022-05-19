@@ -44,8 +44,9 @@ func (a *application) routes() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// fixed path patterns
+	mux.Handle("/users", validateJWT(http.HandlerFunc(users.Handler)))
 	mux.HandleFunc("/signup", users.SignUp)
-	mux.HandleFunc("/users", users.Handler)
+	// mux.HandleFunc("/users", users.Handler)
 	mux.HandleFunc("/auth", a.Auth)
 
 	return mux
