@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/go-qiu/passer-auth-service/data/models"
@@ -32,6 +33,14 @@ func (a *application) Auth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	JWT_ISSUER := os.Getenv("JWT_ISSUER")
+
+	JWT_EXP_MINUTES, err := strconv.Atoi(os.Getenv("JWT_EXP_MINUTES"))
+	if err != nil {
+		errString := "[JWT]: fail to load .env"
+		a.errorLog.Println(errString)
+		a.clientError(w, http.StatusInternalServerError, errString)
+		return
+	}
 
 	// Only allow a 'POST' requst to continue.
 	if r.Method != http.MethodPost {
@@ -84,7 +93,7 @@ func (a *application) Auth(w http.ResponseWriter, r *http.Request) {
 
 		}
 
-		exp := time.Now().Add(time.Minute * 30).UnixMilli()
+		exp := time.Now().Add(time.Minute * time.Duration(JWT_EXP_MINUTES)).UnixMilli()
 		pl := jwt.JWTPayload{
 			Id:       foundUser.Email,
 			Name:     foundUser.Name.First + " " + foundUser.Name.Last,
@@ -116,6 +125,8 @@ func (a *application) Auth(w http.ResponseWriter, r *http.Request) {
 	//
 }
 
+// Users method to direct request to operate on users related data to
+// the appropriate user data operations handler.
 func (a *application) Users(w http.ResponseWriter, r *http.Request) {
 
 	users.Handler(w, r, a.dataStore)

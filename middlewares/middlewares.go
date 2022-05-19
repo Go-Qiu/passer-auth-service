@@ -77,6 +77,7 @@ func ValidateJWT(next http.Handler) http.Handler {
 			return
 		}
 
+		// direct the request to the next handler.
 		next.ServeHTTP(w, r)
 	})
 }

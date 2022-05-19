@@ -5,6 +5,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Preload create the user data points for loading into the in-memory data store.
+// This is facilitate development and testing.
+// Only the admin account will be retained when the project is ready for deployment.
 func Preload() ([]models.User, error) {
 
 	pw := "Testing.12345"
