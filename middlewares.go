@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-qiu/passer-auth-service/jwt"
+	"github.com/joho/godotenv"
 )
 
 func validateJWT(next http.Handler) http.Handler {
@@ -16,6 +17,15 @@ func validateJWT(next http.Handler) http.Handler {
 		// declare custom loggers
 		// infoLog := log.New(os.Stdout, "[INFO]\t", log.Ldate|log.Ltime)
 		errorLog := log.New(os.Stderr, "[ERROR]\t", log.Ldate|log.Ltime|log.Lshortfile)
+
+		// get .env values
+		err := godotenv.Load()
+		if err != nil {
+			errString := "[JWT]: fail to load .env"
+			errorLog.Println(errString)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
+		JWT_SECRET_KEY := os.Getenv("JWT_SECRET_KEY")
 
 		// get the jwt from the request header.
 		authorization := r.Header.Get("Authorization")
@@ -45,7 +55,7 @@ func validateJWT(next http.Handler) http.Handler {
 
 		// ok.
 		// jwt validation logic here.
-		ok, err := jwt.Verify(token, "P@ss3r.54321")
+		ok, err := jwt.Verify(token, JWT_SECRET_KEY)
 		if err != nil {
 
 			errorLog.Println(err.Error())

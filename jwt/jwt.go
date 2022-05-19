@@ -7,8 +7,10 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"strings"
+	"time"
 )
 
 var ErrEmptyToken = errors.New("[JWT]: jwt cannot be empty")
@@ -94,11 +96,21 @@ func Verify(jwt string, key string) (bool, error) {
 	payloadB64 := ts[0] + ts[1]
 	signatureB64 := generateSignature(payloadB64, key)
 
-	if signatureB64 == ts[2] {
-		return true, nil
+	// check #1.
+	// is the signature segment of the jwt the same
+	// as the calculated signature.
+	if signatureB64 != ts[2] {
+		// not the same
+		return false, nil
 	}
 
-	return false, nil
+	// check #2.
+	// is the jwt still valid.
+	if hasExpired(ts[1]) {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 // b64Encode execute base64 encoding of each element passed into it.
@@ -128,21 +140,53 @@ func generateSignature(payloadB64 string, key string) string {
 
 	combined := payloadB64 + key
 
-	// generate a hash using SHA2-512 hashing function
-
+	// generate a hash using SHA512 hashing function.
+	// the direct hashed string is a fixed length [64]hex array.
+	// convert fixed length [64]hex slice to a variable []hex slice.
+	// need to convert it to hex string, for further processing.
 	hash3 := sha512.Sum512([]byte(combined))
 	hash3Bytes := hash3[:]
 	hash3String := hex.EncodeToString(hash3Bytes)
 
 	inputs := [][]byte{}
 
+	// convert the hashed hex string to []byte slice;
+	// append it to the input slice.
 	inputs = append(inputs, []byte(hash3String))
 
+	// declared a []string slice to receive the base64 convertion (i.e. execute a go concurrency pattern) of the hashed hex string.
 	signsB64 := []string{}
 	for sign := range b64Encode(inputs) {
 		signsB64 = append(signsB64, sign)
 	}
-	// hash3B64 := base64.StdEncoding.EncodeToString(hash3Bytes)
 
+	// return the hashed value in base64 format
 	return signsB64[0]
+}
+
+// hasExpired checks if the passed in payload string (in base64 format) has expired.
+// return :
+// - true if it has expired.
+// - false if it has not expired.
+func hasExpired(payloadB64 string) bool {
+
+	jsonString, err := base64.StdEncoding.DecodeString(payloadB64)
+	if err != nil {
+		return true
+	}
+
+	var pl JWTPayload
+	err = json.Unmarshal([]byte(jsonString), &pl)
+	if err != nil {
+		return true
+	}
+
+	now := time.Now().UnixMilli()
+	if pl.Exp < now {
+		// has expired
+		return true
+	}
+
+	// ok. has not expired.
+	return false
 }
