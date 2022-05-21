@@ -94,9 +94,10 @@ func (a *application) Auth(w http.ResponseWriter, r *http.Request) {
 		}
 
 		exp := time.Now().Add(time.Minute * time.Duration(JWT_EXP_MINUTES)).UnixMilli()
+		name := fmt.Sprintf("%s %s", foundUser.Name.First, foundUser.Name.Last)
 		pl := jwt.JWTPayload{
 			Id:       foundUser.Email,
-			Name:     foundUser.Name.First + " " + foundUser.Name.Last,
+			Name:     name,
 			Roles:    foundUser.Roles,
 			IsActive: foundUser.IsActive,
 			Iss:      JWT_ISSUER,
@@ -114,9 +115,10 @@ func (a *application) Auth(w http.ResponseWriter, r *http.Request) {
 			"ok" : true,
 			"msg" : "[AUTH]: authentication successful",
 			"data" : {
-				"token" : "%s"
+				"token" : "%s",
+				"name" : "%s"
 			}
-		}`, token)
+		}`, token, name)
 
 		w.Header().Set("Token", token)
 		fmt.Fprintln(w, msg)

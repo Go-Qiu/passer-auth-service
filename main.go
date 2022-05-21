@@ -55,7 +55,7 @@ func main() {
 	}
 
 	infoLog.Printf("HTTPS Server started and listening on https://%s ...", addr)
-	err = srv.ListenAndServeTLS("./ssl/cert.pem", "./ssl/key.pem")
+	err = srv.ListenAndServeTLS("./ssl/cert03.pem", "./ssl/key03.pem")
 	if err != nil {
 		errorLog.Fatal(err)
 	}
