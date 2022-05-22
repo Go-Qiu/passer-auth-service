@@ -38,5 +38,6 @@ func (a *application) routes() *http.ServeMux {
 	// fixed path patterns
 	mux.HandleFunc("/auth", a.Auth)
 	mux.Handle("/users", middlewares.ValidateJWT(http.HandlerFunc(a.Users)))
+	mux.Handle("/verify", middlewares.ValidateJWT(http.HandlerFunc(a.Verify)))
 	return mux
 }

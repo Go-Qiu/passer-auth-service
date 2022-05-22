@@ -29,7 +29,12 @@ func (a *application) Auth(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errString := "[JWT]: fail to load .env"
 		a.errorLog.Println(errString)
-		a.clientError(w, http.StatusInternalServerError, errString)
+		msg := fmt.Sprintf(`{
+			"ok" : false,
+			"msg" : "%s",
+			"data" : {}
+		}`, errString)
+		a.clientError(w, http.StatusInternalServerError, msg)
 		return
 	}
 	JWT_ISSUER := os.Getenv("JWT_ISSUER")
@@ -38,7 +43,12 @@ func (a *application) Auth(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errString := "[JWT]: fail to load .env"
 		a.errorLog.Println(errString)
-		a.clientError(w, http.StatusInternalServerError, errString)
+		msg := fmt.Sprintf(`{
+			"ok" : false,
+			"msg" : "%s",
+			"data" : {}
+		}`, errString)
+		a.clientError(w, http.StatusInternalServerError, msg)
 		return
 	}
 
@@ -46,8 +56,12 @@ func (a *application) Auth(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 
 		// not a 'POST' request
-		msg := fmt.Sprintf("[AUTH]: request method, '%s' is not allowed for this api endpoint", r.Method)
-		// http.Error(w, msg, http.StatusForbidden)
+		errString := fmt.Sprintf("[AUTH]: request method, '%s' is not allowed for this api endpoint", r.Method)
+		msg := fmt.Sprintf(`{
+			"ok" : false,
+			"msg" : "%s",
+			"data" : {}
+		}`, errString)
 		a.clientError(w, http.StatusBadRequest, msg)
 		return
 	}
@@ -107,7 +121,13 @@ func (a *application) Auth(w http.ResponseWriter, r *http.Request) {
 		var token string
 		token, err = generateJWT(pl)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			msg := fmt.Sprintf(`{
+				"ok" : false,
+				"msg" : "%s",
+				"data" : {}
+			}`, err)
+			// http.Error(w, err.Error(), http.StatusInternalServerError)
+			a.clientError(w, http.StatusInternalServerError, msg)
 			return
 		}
 
@@ -120,7 +140,8 @@ func (a *application) Auth(w http.ResponseWriter, r *http.Request) {
 			}
 		}`, token, name)
 
-		w.Header().Set("Token", token)
+		bearerToken := fmt.Sprintf("Bearer %s", token)
+		w.Header().Set("Authorization", bearerToken)
 		fmt.Fprintln(w, msg)
 		return
 	}
@@ -132,4 +153,24 @@ func (a *application) Auth(w http.ResponseWriter, r *http.Request) {
 func (a *application) Users(w http.ResponseWriter, r *http.Request) {
 
 	users.Handler(w, r, a.dataStore)
+}
+
+// Verify method to verify the validity of a token.
+// This method is used with the ValidateJWT middlemware.
+// When the request reaches this method, it has already passed
+// the validity check of ValidateJWT middleware.
+func (a *application) Verify(w http.ResponseWriter, r *http.Request) {
+	authorization := r.Header.Get("Authorization")
+	// token := strings.TrimPrefix(authorization, "Bearer ")
+
+	msg := fmt.Sprintln(`{
+		"ok" : true,
+		"msg" : "[AUTH]: token is valid",
+		"data" : {}
+	}`)
+
+	// bearerToken := fmt.Sprintf("Bearer %s", token)
+	w.Header().Set("Authorization", authorization)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, msg)
 }

@@ -11,8 +11,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// ValidateJWT is a middleware that will in check for the presence of a 'Token' attribute in the request header.
-// It will permist the request to continue its flow to the secureed api endpoint if the 'Token' is present and valid.
+// ValidateJWT is a middleware that will check for the presence of a 'Token' attribute in the request header.
+// It will permit the request to continue its flow to the secureed api endpoint if the 'Token' is present and valid.
 // A valid 'Token' must satisfy the following:
 // - the signature segment of the 'Token' must be consistent when this middleware signs the content of the Header and Payload segments (of the 'Token') with the secret key;
 // - the 'exp' attribute in the Payload (encoded in Base64 format) has not come to pass.
@@ -28,7 +28,17 @@ func ValidateJWT(next http.Handler) http.Handler {
 		if err != nil {
 			errString := "[JWT]: fail to load .env"
 			errorLog.Println(errString)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			// http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Header().Set("Content-Type", "application/json")
+			msg := fmt.Sprintf(`{
+				"ok": false,
+				"msg": "%s",
+				"data": {}
+			}`, errString)
+			fmt.Fprintln(w, msg)
+			return
 		}
 		JWT_SECRET_KEY := os.Getenv("JWT_SECRET_KEY")
 
@@ -39,12 +49,16 @@ func ValidateJWT(next http.Handler) http.Handler {
 			errString := "[Middleware]: no token found"
 			errorLog.Println(errString)
 
+			// http.Error(w, msg, http.StatusForbidden)
+
+			w.WriteHeader(http.StatusForbidden)
+			w.Header().Set("Content-Type", "application/json")
 			msg := fmt.Sprintf(`{
 				"ok": false,
 				"msg": "%s",
 				"data": {}
 			}`, errString)
-			http.Error(w, msg, http.StatusForbidden)
+			fmt.Fprintln(w, msg)
 			return
 		}
 
@@ -53,8 +67,16 @@ func ValidateJWT(next http.Handler) http.Handler {
 			// empty token
 			errString := "[Middleware]: no token found"
 			errorLog.Println(errString)
+			// http.Error(w, errString, http.StatusForbidden)
 
-			http.Error(w, errString, http.StatusForbidden)
+			w.WriteHeader(http.StatusForbidden)
+			w.Header().Set("Content-Type", "application/json")
+			msg := fmt.Sprintf(`{
+				"ok": false,
+				"msg": "%s",
+				"data": {}
+			}`, errString)
+			fmt.Fprintln(w, msg)
 			return
 		}
 
@@ -64,16 +86,32 @@ func ValidateJWT(next http.Handler) http.Handler {
 		if err != nil {
 
 			errorLog.Println(err.Error())
-			http.Error(w, err.Error(), http.StatusForbidden)
+			// http.Error(w, err.Error(), http.StatusForbidden)
+
+			w.WriteHeader(http.StatusForbidden)
+			w.Header().Set("Content-Type", "application/json")
+			msg := fmt.Sprintf(`{
+				"ok": false,
+				"msg": "%s",
+				"data": {}
+			}`, err)
+			fmt.Fprintln(w, msg)
 			return
 		}
 
 		if !ok {
 
 			errString := "[JWT]: fail to validate token"
-			w.Header().Set("Content-Type", "application/json")
+			// http.Error(w, errString, http.StatusForbidden)
 
-			http.Error(w, errString, http.StatusForbidden)
+			w.WriteHeader(http.StatusForbidden)
+			w.Header().Set("Content-Type", "application/json")
+			msg := fmt.Sprintf(`{
+				"ok": false,
+				"msg": "%s",
+				"data": {}
+			}`, errString)
+			fmt.Fprintln(w, msg)
 			return
 		}
 
