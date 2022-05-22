@@ -136,9 +136,10 @@ func (a *application) Auth(w http.ResponseWriter, r *http.Request) {
 			"msg" : "[AUTH]: authentication successful",
 			"data" : {
 				"token" : "%s",
-				"name" : "%s"
+				"name" : "%s",
+				"email" : "%s"
 			}
-		}`, token, name)
+		}`, token, name, foundUser.Email)
 
 		bearerToken := fmt.Sprintf("Bearer %s", token)
 		w.Header().Set("Authorization", bearerToken)
